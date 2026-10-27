@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wedding Invitation</title>
+
+    <!--
+  Yeh page ek wedding invitation video dikhata hai.
+  Video ke aakhri 18 second mein upar ek map card fade in hota hai,
+  5 second rukta hai, phir fade out ho jata hai.
+  Map ek hi baar aata hai. Video wapas shuru karoge to end par phir aayega.
+-->
+    <style>
+      /* Card ke colours. Inhe ek jagah rakha hai taaki baad mein badalna aasaan ho. */
+      :root {
+        --gold: #c6a15b;
+        --ink: #2a241c;
+        --card: rgba(255, 250, 242, 0.97);
+      }
+
+      /* Padding ko width ke andar gino, taaki box screen se bahar na nikle. */
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #111;
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      /*
+    Video aur map dono isi box ke andar hain.
+    position: relative zaroori hai, kyunki map isi box ke upar tikta hai.
+  */
+      .video-container {
+        position: relative;
+        width: 100%;
+        max-width: 1000px;
+        margin: auto;
+        background: #000;
+      }
+
+      /* Video box ki poori width le, neeche extra khali jagah na chhode. */
+      #video {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      /*
+    Map shuru mein chhupa hota hai.
+    opacity 0 = dikhai nahi deta.
+    visibility hidden = screen reader ke liye bhi chhupa.
+    pointer-events none = chhupa hone par click video tak pahunche, map par nahi.
+    transition = dikhne aur hatne par 0.6 second ki dheemi movement.
+  */
+      .location {
+        position: absolute;
+        left: 50%;
+        top: 62%;
+        z-index: 5;
+        width: min(90%, 520px);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translate(-50%, -42%);
+        transition:
+          opacity 0.6s ease,
+          transform 0.6s ease,
+          visibility 0.6s ease;
+      }
+
+      /*
+    Jab JavaScript "is-visible" class lagata hai, map dheere se beech mein aa jata hai.
+    Class hat-te hi upar wale rules wapas lagte hain, isliye map fade out ho jata hai.
+  */
+      .location.is-visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translate(-50%, -50%);
+      }
+
+      /* Map ka cream card: gol kon, halka border, aur neeche shadow. */
+      .location-card {
+        overflow: hidden;
+        background: var(--card);
+        border: 1px solid #f0e2c4;
+        border-radius: 14px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      }
+
+      /* Card ke upar "LOCATION" likha hota hai. */
+      .location-label {
+        margin: 0;
+        padding: 12px 16px 0;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: normal;
+        letter-spacing: 0.22em;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      /* Google map isi frame mein khulta hai. */
+      .location-card iframe {
+        display: block;
+        width: 100%;
+        height: 200px;
+        border: 0;
+      }
+
+      /* Phone par card thoda chhota, taaki video ke controls na dhakke. */
+      @media (max-width: 480px) {
+        .location {
+          width: min(92%, 440px);
+          top: 65%;
+        }
+
+        .location-label {
+          font-size: 11px;
+          letter-spacing: 0.16em;
+        }
+
+        .location-card iframe {
+          height: 210px;
+        }
+      }
+
+      /* Jis phone mein animation band ho, wahan map bina slide ke seedha aaye aur hat jaye. */
+      @media (prefers-reduced-motion: reduce) {
+        .location {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Video aur uske upar wala map, dono ek hi container mein. -->
+    <div class="video-container">
+      <!-- Video.mp4 isi folder mein hai, isliye path "./Video.mp4" hai. -->
+      <video id="video" controls playsinline preload="metadata">
+        <source src="./Video.mp4" type="video/mp4" />
+        Your browser does not support video playback.
+      </video>
+
+      <!--
+      Map card. Shuru mein class "location" hai, "is-visible" nahi,
+      isliye yeh chhupa rehta hai jab tak script use na dikhaye.
+    -->
+      <div id="location" class="location" aria-hidden="true">
+        <div class="location-card">
+          <p class="location-label">Location</p>
+          <iframe
+            title="Wedding venue map"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3607.9336449616876!2d82.98544780000002!3d25.2728175!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x398e3225999b5ce7%3A0x20f1905acc93a780!2sUniversity%20Club!5e0!3m2!1sen!2sin!4v1792998077833!5m2!1sen!2sin"
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+          >
+          </iframe>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Page ke video aur map wale div ko pakda.
+      const video = document.getElementById("video");
+      const locationBox = document.getElementById("location");
+
+      // Video khatam hone se kitne second pehle map aaye.
+      const SHOW_BEFORE_END_SECONDS = 18;
+
+      // Map kitni der tak dikhe. 5000 = 5 second.
+      const VISIBLE_MS = 5000;
+
+      // 5 second wala timer yahan save hota hai, taaki use rok sakein.
+      let hideTimer = null;
+
+      // true ka matlab is play mein map ek baar dikh chuka hai.
+      // Isi se map 5 second baad hat kar turant wapas nahi aata.
+      let shown = false;
+
+      // Map ko fade in karo, aur 5 second baad hatane ka timer laga do.
+      function showLocation() {
+        // Pehle hi dikh chuka hai to dubara mat dikhao.
+        if (shown) return;
+
+        shown = true;
+        locationBox.classList.add("is-visible");
+        locationBox.setAttribute("aria-hidden", "false");
+
+        // Purana timer ho to hatao, nahi to map jaldi hat sakta hai.
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(hideLocation, VISIBLE_MS);
+      }
+
+      // Map ko fade out karo. "shown" ko yahan false nahi karte,
+      // warna video abhi end ke paas ho to map phir se aa jayega.
+      function hideLocation() {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+        locationBox.classList.remove("is-visible");
+        locationBox.setAttribute("aria-hidden", "true");
+      }
+
+      // Video wapas shuru hone par map ko reset karo,
+      // taaki agli baar end par woh phir ek baar aa sake.
+      function resetLocation() {
+        shown = false;
+        hideLocation();
+      }
+
+      // Har thodi der par check karo: map dikhana hai ya chhupana hai.
+      function syncLocation() {
+        const duration = video.duration;
+
+        // Video ki lambai abhi pata nahi, to kuch mat karo.
+        if (!Number.isFinite(duration) || duration <= 0) return;
+
+        // Example: video 53 second ki hai, to map 35 second par aayega.
+        const showAt = Math.max(0, duration - SHOW_BEFORE_END_SECONDS);
+
+        // User abhi us time se pehle hai.
+        if (video.currentTime < showAt) {
+          // Agar map pehle dikh chuka tha aur user video peeche le gaya,
+          // to use reset karo. Aage chalane par map phir se aa sakega.
+          if (shown) resetLocation();
+          return;
+        }
+
+        // Video aakhri 18 second mein hai, map dikhao.
+        showLocation();
+      }
+
+      // Video chalte waqt bar-bar time check hota hai.
+      video.addEventListener("timeupdate", syncLocation);
+
+      // User video ko aage-peeche kheenche to bhi wahi check chale.
+      video.addEventListener("seeked", syncLocation);
+
+      // Video khatam ho aur map abhi tak na aaya ho, to ek baar dikha do.
+      video.addEventListener("ended", showLocation);
+    </script>
+  </body>
+</html>
